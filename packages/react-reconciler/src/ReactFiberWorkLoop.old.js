@@ -245,14 +245,14 @@ const {
 
 type ExecutionContext = number;
 
-export const NoContext = /*             */ 0b0000000;
-const BatchedContext = /*               */ 0b0000001;
-const EventContext = /*                 */ 0b0000010;
-const DiscreteEventContext = /*         */ 0b0000100;
-const LegacyUnbatchedContext = /*       */ 0b0001000;
-const RenderContext = /*                */ 0b0010000;
-const CommitContext = /*                */ 0b0100000;
-export const RetryAfterError = /*       */ 0b1000000;
+export const NoContext = /*             */ 0b0000000; // 还没有操作 zxp
+const BatchedContext = /*               */ 0b0000001; // 批量执行的时候
+const EventContext = /*                 */ 0b0000010; // 事件
+const DiscreteEventContext = /*         */ 0b0000100; // 记录事件类型，onClick、onChange等
+const LegacyUnbatchedContext = /*       */ 0b0001000; // 不是批量执行的时候，如初次渲染
+const RenderContext = /*                */ 0b0010000; // 渲染阶段（提交前）
+const CommitContext = /*                */ 0b0100000; // 执行阶段
+export const RetryAfterError = /*       */ 0b1000000; // 失败后再次执行
 
 type RootExitStatus = 0 | 1 | 2 | 3 | 4 | 5;
 const RootIncomplete = 0;
@@ -529,13 +529,15 @@ export function scheduleUpdateOnFiber(
 
   // Mark that the root has a pending update.
   markRootUpdated(root, lane, eventTime);
-
+  // workInProgressRoot 根结点 zxp
   if (root === workInProgressRoot) {
     // Received an update to a tree that's in the middle of rendering. Mark
     // that there was an interleaved update work on this root. Unless the
     // `deferRenderPhaseUpdateToNextBatch` flag is off and this is a render
     // phase update. In that case, we don't treat render phase updates as if
     // they were interleaved, for backwards compat reasons.
+
+    // executionContext 判断一下当前属于哪个阶段，是一全局变量
     if (
       deferRenderPhaseUpdateToNextBatch ||
       (executionContext & RenderContext) === NoContext
@@ -560,6 +562,8 @@ export function scheduleUpdateOnFiber(
   // priority as an argument to that function and this one.
   const priorityLevel = getCurrentPriorityLevel();
 
+  // 判断是否在有效期范围之内,SyncLane:同步的优先级
+  // 通过ReactDOM.render方式都会走这个分支 log-zxp
   if (lane === SyncLane) {
     if (
       // Check if we're inside unbatchedUpdates
@@ -961,6 +965,7 @@ function markRootSuspended(root, suspendedLanes) {
 
 // This is the entry point for synchronous tasks that don't go
 // through Scheduler
+// 处理更新、返回下一个任务 zxp
 function performSyncWorkOnRoot(root) {
   invariant(
     (executionContext & (RenderContext | CommitContext)) === NoContext,
@@ -978,6 +983,7 @@ function performSyncWorkOnRoot(root) {
     // There's a partial tree, and at least one of its lanes has expired. Finish
     // rendering it before rendering the rest of the expired work.
     lanes = workInProgressRootRenderLanes;
+    // renderRootSync处理更新
     exitStatus = renderRootSync(root, lanes);
     if (
       includesSomeLane(
@@ -1486,6 +1492,8 @@ export function renderHasNotSuspendedYet(): boolean {
   return workInProgressRootExitStatus === RootIncomplete;
 }
 
+// 先处理当前节点，返回下一个节点，然后再处理下一个节点，知道没有节点需要更新
+// 最后如果存在根节点，就提交根结点
 function renderRootSync(root: FiberRoot, lanes: Lanes) {
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
@@ -1556,6 +1564,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopSync() {
   // Already timed out, so perform work without checking if we need to yield.
+  // workInProgress当前正在处理的fiber节点，一直更新直到没有节点需要更新
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
   }
@@ -1646,11 +1655,13 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   setCurrentDebugFiberInDEV(unitOfWork);
 
   let next;
+  // ProfileMode用于测试性能，比如记录花了多少时间，消耗了多少性能
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
     next = beginWork(current, unitOfWork, subtreeRenderLanes);
     stopProfilerTimerIfRunningAndRecordDelta(unitOfWork, true);
   } else {
+    // beginWork：执行当前的任务，并且返回下一个
     next = beginWork(current, unitOfWork, subtreeRenderLanes);
   }
 
@@ -2407,6 +2418,7 @@ function commitLayoutEffects(root: FiberRoot, committedLanes: Lanes) {
         commitAttachRef(nextEffect);
       }
     } else {
+      // 如果有ref的副作用，则给当前的ref赋值
       if (flags & Ref) {
         commitAttachRef(nextEffect);
       }

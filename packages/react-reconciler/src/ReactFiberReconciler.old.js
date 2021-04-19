@@ -247,6 +247,7 @@ export function createContainer(
   return createFiberRoot(containerInfo, tag, hydrate, hydrationCallbacks);
 }
 
+// zxp
 export function updateContainer(
   element: ReactNodeList,
   container: OpaqueRoot,
@@ -313,8 +314,10 @@ export function updateContainer(
     }
     update.callback = callback;
   }
-
+  // setState和forceUpdate也会走这两个
+  // 将uddate变成一个链表都形式 zxp
   enqueueUpdate(current, update);
+  // 处理fiber节点上都更新
   scheduleUpdateOnFiber(current, lane, eventTime);
 
   return lane;

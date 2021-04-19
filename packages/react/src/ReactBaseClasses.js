@@ -54,6 +54,7 @@ Component.prototype.isReactComponent = {};
  * @final
  * @protected
  */
+// setState zxp
 Component.prototype.setState = function(partialState, callback) {
   invariant(
     typeof partialState === 'object' ||
@@ -62,6 +63,7 @@ Component.prototype.setState = function(partialState, callback) {
     'setState(...): takes an object of state variables to update or a ' +
       'function which returns an object of state variables.',
   );
+  // 这里的enqueueSetState就是classComponentUpdater中的
   this.updater.enqueueSetState(this, partialState, callback, 'setState');
 };
 

@@ -217,7 +217,7 @@ const classComponentUpdater = {
         }
       }
     }
-
+    // 做性能优化的
     if (enableSchedulingProfiler) {
       markStateUpdateScheduled(fiber, lane);
     }
@@ -559,7 +559,7 @@ function checkClassInstance(workInProgress: Fiber, ctor: any, newProps: any) {
     }
   }
 }
-
+// 初次渲染类组件，new一个实例后会将classComponentUpdater挂载到实例到updater上 zxp
 function adoptClassInstance(workInProgress: Fiber, instance: any): void {
   instance.updater = classComponentUpdater;
   workInProgress.stateNode = instance;

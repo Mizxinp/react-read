@@ -189,6 +189,7 @@ function legacyRenderSubtreeIntoContainer(
   let root: RootType = (container._reactRootContainer: any);
   let fiberRoot;
   if (!root) {
+    // 初次挂载 zxp
     // Initial mount
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
@@ -203,6 +204,7 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // 初次渲染和更新都调用了updateContainer方法，区别在于初次渲染不是批量更新，需要马上更新 zxp
     unbatchedUpdates(() => {
       updateContainer(children, fiberRoot, parentComponent, callback);
     });
@@ -215,6 +217,7 @@ function legacyRenderSubtreeIntoContainer(
         originalCallback.call(instance);
       };
     }
+    // 这里是批量更新 zxp
     // Update
     updateContainer(children, fiberRoot, parentComponent, callback);
   }

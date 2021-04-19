@@ -813,9 +813,10 @@ function updateClassComponent(
     hasContext = false;
   }
   prepareToReadContext(workInProgress, renderLanes);
-
+  // instance存储类实例 zxp
   const instance = workInProgress.stateNode;
   let shouldUpdate;
+  // instance为null表示初次渲染
   if (instance === null) {
     if (current !== null) {
       // A class component without an instance only mounts if it suspended
@@ -828,6 +829,7 @@ function updateClassComponent(
       workInProgress.flags |= Placement;
     }
     // In the initial pass we might need to construct the instance.
+    // 构造类实例
     constructClassInstance(workInProgress, Component, nextProps);
     mountClassInstance(workInProgress, Component, nextProps, renderLanes);
     shouldUpdate = true;
@@ -2994,6 +2996,8 @@ function remountFiber(
   }
 }
 
+// 执行当前的任务，并且返回下一个 beginWork zxp
+// props和context发生改变，
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -3019,6 +3023,7 @@ function beginWork(
     }
   }
 
+  // current：已经渲染到页面的节点
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
@@ -3033,6 +3038,7 @@ function beginWork(
       // This may be unset if the props are determined to be equal later (memo).
       didReceiveUpdate = true;
     } else if (!includesSomeLane(renderLanes, updateLanes)) {
+      // 不是update操作，但也需要对一些记录做修改，比如记录对context参数值需要变化
       didReceiveUpdate = false;
       // This fiber does not have any pending work. Bailout without entering
       // the begin phase. There's still some bookkeeping we that needs to be done

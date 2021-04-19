@@ -529,22 +529,28 @@ export function resetHooksAfterThrow(): void {
   didScheduleRenderPhaseUpdateDuringThisPass = false;
 }
 
+// Hook的数据结构--- 链表（zxp）
 function mountWorkInProgressHook(): Hook {
+  // 新建Hook
   const hook: Hook = {
-    memoizedState: null,
+    memoizedState: null, // Hook 自身维护的状态
 
     baseState: null,
     baseQueue: null,
-    queue: null,
+    queue: null, // 自身维护的更新队列
 
-    next: null,
+    next: null, // 指向下一个Hook
   };
 
+  // workInProgressHook 指向当前组件的Hook链表
   if (workInProgressHook === null) {
     // This is the first hook in the list
+    // 如果链表为空，则新建的Hook作为Hook链表的第一个节点 （zxp）
+    // 这里的currentlyRenderingFiber就是当前的FiberNode
     currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
   } else {
     // Append to the end of the list
+    // 不为空，则将新建的Hook添加到Hook链表的末尾作为尾节点
     workInProgressHook = workInProgressHook.next = hook;
   }
   return workInProgressHook;
@@ -654,7 +660,9 @@ function updateReducer<S, I, A>(
   initialArg: I,
   init?: I => S,
 ): [S, Dispatch<A>] {
+  // 获取正在执行的处于更新阶段的Hook节点
   const hook = updateWorkInProgressHook();
+  // 获取更新队列链表
   const queue = hook.queue;
   invariant(
     queue !== null,
@@ -696,14 +704,16 @@ function updateReducer<S, I, A>(
 
   if (baseQueue !== null) {
     // We have a queue to process.
+    // 获取更新队列最初的update对象节点（zxp）
     const first = baseQueue.next;
+    // 初始化newState
     let newState = current.baseState;
 
     let newBaseState = null;
     let newBaseQueueFirst = null;
     let newBaseQueueLast = null;
     let update = first;
-    do {
+    do { // 循环遍历更新队列链表
       const updateLane = update.lane;
       if (!isSubsetOfLanes(renderLanes, updateLane)) {
         // Priority is insufficient. Skip this update. If this is the first
@@ -779,6 +789,7 @@ function updateReducer<S, I, A>(
     queue.lastRenderedState = newState;
   }
 
+  // 返回最新的状态和修改状态的方法
   const dispatch: Dispatch<A> = (queue.dispatch: any);
   return [hook.memoizedState, dispatch];
 }
@@ -1114,18 +1125,22 @@ function updateMutableSource<Source, Snapshot>(
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
+  // 获取当前hook节点，同时将当前hook添加到hook链表中
   const hook = mountWorkInProgressHook();
+  // 初始化hook的状态（读取初始state值）
   if (typeof initialState === 'function') {
     // $FlowFixMe: Flow doesn't like mixed types
     initialState = initialState();
   }
   hook.memoizedState = hook.baseState = initialState;
+  // 创建一个新的链表作为更新队列，用来存放更新操作（如setXxx()）
   const queue = (hook.queue = {
-    pending: null,
-    dispatch: null,
-    lastRenderedReducer: basicStateReducer,
-    lastRenderedState: (initialState: any),
+    pending: null, // 最近一个等待执行的更新
+    dispatch: null, // 更新state的方法
+    lastRenderedReducer: basicStateReducer, // 组件最近一次渲染用的reducer（useState实际是一个简化版的useReducer，不需要传reducer是因为默认使用了basicStateReducer
+    lastRenderedState: (initialState: any), // 组件最近一次渲染的state
   });
+  // 创建dispatch方法，即useState返回的数组的第二个参数），该方法的用途是用来修改 state，并将此更新操作添加到更新队列中，另外还会将该更新和当前正在渲染的 fiber 绑定起来
   const dispatch: Dispatch<
     BasicStateAction<S>,
   > = (queue.dispatch = (dispatchAction.bind(
@@ -1133,12 +1148,14 @@ function mountState<S>(
     currentlyRenderingFiber,
     queue,
   ): any));
+  // 返回当前state和dispatch
   return [hook.memoizedState, dispatch];
 }
 
 function updateState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
+  // 
   return updateReducer(basicStateReducer, (initialState: any));
 }
 
@@ -1273,6 +1290,8 @@ function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   currentlyRenderingFiber.flags |= fiberFlags;
+  // pushEffect的作用是将当前effect添加到FiberNode的updateQueue中，然后返回当前effect
+  // 然后把返回effect保存到hook节点到memoizedState属性中
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
@@ -1721,6 +1740,7 @@ function rerenderOpaqueIdentifier(): OpaqueIDType | void {
   return id;
 }
 
+// 新建一个update对象，添加到更新队列（queue链表上），实际是一个循环链表
 function dispatchAction<S, A>(
   fiber: Fiber,
   queue: UpdateQueue<S, A>,
@@ -1748,14 +1768,19 @@ function dispatchAction<S, A>(
   };
 
   // Append the update to the end of the list.
+  // pending 指向的最新的update对象
   const pending = queue.pending;
   if (pending === null) {
     // This is the first update. Create a circular list.
+    // 如果队列为空，将当前更新作为更新队列的第一个节点，并且它的next属性指向自身，以此来保持一个循环链表
     update.next = update;
   } else {
+    // 不为空则将当前更新对象插入链表的头部
     update.next = pending.next;
+    // 链表的尾节点指向头节点，以保持一个循环链表
     pending.next = update;
   }
+  // 让queue.pending 指向最新的头节点
   queue.pending = update;
 
   const alternate = fiber.alternate;
@@ -1783,7 +1808,9 @@ function dispatchAction<S, A>(
           ReactCurrentDispatcher.current = InvalidNestedHooksDispatcherOnUpdateInDEV;
         }
         try {
-          const currentState: S = (queue.lastRenderedState: any);
+          // 获取已经渲染的state（正显示在屏幕上的state）
+          const currentState: S = (queue.  : any);
+          // 获取最新计算出来的state
           const eagerState = lastRenderedReducer(currentState, action);
           // Stash the eagerly computed state, and the reducer used to compute
           // it, on the update object. If the reducer hasn't changed by the
@@ -1791,6 +1818,7 @@ function dispatchAction<S, A>(
           // without calling the reducer again.
           update.eagerReducer = lastRenderedReducer;
           update.eagerState = eagerState;
+          // 如果前后两个state相等，则直接跳过，不进行更新
           if (is(eagerState, currentState)) {
             // Fast path. We can bail out without scheduling React to re-render.
             // It's still possible that we'll need to rebase this update later,

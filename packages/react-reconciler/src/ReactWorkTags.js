@@ -33,8 +33,13 @@ export type WorkTag =
   | 22
   | 23;
 
-export const FunctionComponent = 0;
-export const ClassComponent = 1;
+
+/**
+ * 标记不同组件的类型 zxp
+ */
+
+export const FunctionComponent = 0; // 函数组件
+export const ClassComponent = 1; // 类组件
 export const IndeterminateComponent = 2; // Before we know whether it is function or class
 export const HostRoot = 3; // Root of a host tree. Could be nested inside another node.
 export const HostPortal = 4; // A subtree. Could be an entry point to a different renderer.

@@ -225,7 +225,7 @@ const {
   ReactCurrentDispatcher,
   ReactCurrentOwner,
   IsSomeRendererActing,
-} = ReactSharedInternals;
+} = ReactSharedInternals;1
 
 type ExecutionContext = number;
 

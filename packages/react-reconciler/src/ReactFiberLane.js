@@ -7,6 +7,12 @@
  * @flow
  */
 
+ /**
+  * Lane: 过期时间 zxp
+  * 以前：原先的数字，使用experationTime。缺点只能标记一个优先级
+  * 17: 二进制表示，可以表示多个优先级
+  */
+
 import type {FiberRoot, ReactPriorityLevel} from './ReactInternalTypes';
 
 export opaque type LanePriority =
